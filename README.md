@@ -31,6 +31,11 @@ The files are also available in the *data* folder in zip format (due to size lim
 All steps were done using R language.
 
 ## Key Outcomes
+- **Peak Season** : Summer is the peak season for rider (top 3: August, July & June) 
+- **Peak Usage Times** : Casual riders tend to use bikes more on weekends, while member riders predominantly ride during weekdays, with a peak on Wednesdays, indicating a commuting pattern.
+- **Riders' Bike Usage Patterns** : Casual riders and member riders travel similar distances, but casual riders take longer trips, indicating a leisure-focused use, while member riders likely use the bikes for practical, commuting purposes.
+- **Member Riders' Consistent Return Behavior** : Member riders are more likely to return bikes to the same station, further supporting the idea of a practical, commuting-focused use.
+- **Bike Type Preferences**: Casual riders tend to prefer electric bikes, while members are more likely to choose classic bikes.
 
 ## Author
 Solène Catella
