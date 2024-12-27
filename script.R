@@ -27,6 +27,8 @@ tripdata_list <- list(
   tripdata_2024_03, tripdata_2024_04, tripdata_2024_05, tripdata_2024_06
 )
 
+dir.create("viz")
+
 # Combining all the data sets
 # Before merging, we need to ensure that all data files have the same structure (columns and column names)
 num_columns <- sapply(tripdata_list, ncol) # checking number of columns (13)
@@ -60,6 +62,7 @@ all_tripdata <- all_tripdata %>%
     ride_length = difftime(ended_at_date, started_at_date, units = "mins"),
     month = month(started_at_date, label = TRUE, abbr = FALSE),
     day = wday(started_at_date, label = TRUE, abbr = FALSE),
+    hour = hour(started_at_date),
     ride_length_numeric = as.numeric(ride_length)
   ) %>%
  filter(started_at_date != ended_at_date) # rides where the date of start and the date of end are the same are removed
@@ -95,6 +98,7 @@ all_tripdata_filtered <- all_tripdata_filtered %>%
        start_lat = start_lat,
        end_lng = end_lng,
        end_lat = end_lat) #  shortest path calculation using longitude & latitude points
+)
 
 # DATA ANALYSIS
 # -- Maximum ride duration --
@@ -119,6 +123,27 @@ most_rided_days <- all_tripdata_filtered %>%
  top_n(1, trip_count) 
 most_rided_days # insights: Saturday (896,642 trips) is the most busy day
 
+# -- Average Number of Rides by Hour for Casual Riders --
+most_hourly_rides <- all_tripdata_filtered %>%
+  group_by(hour) %>%
+  summarise(ride_count = n()) %>%
+  arrange(desc(ride_count))
+
+plot_1 <- ggplot(most_hourly_rides, aes(x = factor(hour), y = ride_count, fill = ride_count)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Rides per Hour Segment for Casual Members",
+    x = "Hour of Day",
+    y = "Number of Rides"
+  ) +
+  scale_x_discrete(labels = as.character(0:23)) +
+  scale_y_continuous(labels = scales::comma) +
+  scale_fill_gradient(low = "lightgrey", high = "black")
+
+plot_1 # insights: casual riders ride the most between 3pm and 6pm.
+
+ggsave("./viz/average_number_rides_by_hour.png", plot = plot_1, width = 10, height = 6)
+
 # -- Average Trip Duration by User Type --
 unique(all_tripdata_filtered$member_casual) # member riders vs casual riders
 rides_by_user <- all_tripdata_filtered %>%
@@ -126,17 +151,17 @@ rides_by_user <- all_tripdata_filtered %>%
  summarise(average_duration = mean(as.numeric(ride_length), na.rm = TRUE)) # count number of rides by day
 rides_by_user
 
-plot_1 <- ggplot(rides_by_user, aes(x = member_casual, y = average_duration, fill = member_casual)) +
+plot_2 <- ggplot(rides_by_user, aes(x = member_casual, y = average_duration, fill = member_casual)) +
 geom_bar(stat = "identity") +
 labs(
   title = "Average Trip Duration by User Type",
   x = "User type",
   y = "Average ride duration (min)"
-  ) # insights: casual riders have longer average trip duration than member riders
+  ) 
 
-dir.create("viz")
-ggsave("./viz/average_trip_duration_by_user_type.png", plot = plot_1, width = 10, height = 6)
+plot_2 # insights: casual riders have longer average ride duration than member riders, especially on weekends
 
+ggsave("./viz/average_trip_duration_by_user_type.png", plot = plot_2, width = 10, height = 6)
 
 # -- Average Ride Duration for Member Riders by Day --
 member_riders_by_day <- all_tripdata_filtered %>%
@@ -160,7 +185,7 @@ all_trip_duration_summary <- all_tripdata_filtered %>%
 
 all_trip_duration_summary$average_duration <- as.numeric(all_tripdata_summary$average_duration)
 
-plot_2 <- ggplot(all_trip_duration_summary, aes(x = day, y = average_duration, fill = member_casual)) +
+plot_3 <- ggplot(all_trip_duration_summary, aes(x = day, y = average_duration, fill = member_casual)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(
     title = "Total riding time by rider type and by day of the week",
@@ -169,15 +194,16 @@ plot_2 <- ggplot(all_trip_duration_summary, aes(x = day, y = average_duration, f
     fill = "Rider type"
   )
 
-ggsave("./viz/riding_time_by_rider_type_by_day.png", plot = plot_2, width = 10, height = 6)
+plot_3 # insights: casual riders ride most often on weekends
 
+ggsave("./viz/riding_time_by_rider_type_by_day.png", plot = plot_3, width = 10, height = 6)
 
 # -- Number of Rides by Rider Type and Day --
 all_trip_count_summary <- all_tripdata_filtered %>%
   group_by(day, member_casual) %>%
   summarise(trip_count = n(), .groups = "drop")
 
-plot_3 <- ggplot(all_trip_count_summary, aes(x = day, y = trip_count, fill = member_casual)) +
+plot_4 <- ggplot(all_trip_count_summary, aes(x = day, y = trip_count, fill = member_casual)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(
     title = "Number of Rides by Rider Type and Day",
@@ -186,7 +212,9 @@ plot_3 <- ggplot(all_trip_count_summary, aes(x = day, y = trip_count, fill = mem
     fill = "Rider type"
   )
 
-ggsave("./viz/total_rides_by_rider_type_by_day.png", plot = plot_3, width = 10, height = 6)
+plot_4 # insights: casual riders tend to use bikes more on weekends, while member riders ride during weekdays
+
+ggsave("./viz/total_rides_by_rider_type_by_day.png", plot = plot_4, width = 10, height = 6)
 
 # -- Type of Bike By Rider Type --
 bike_type_rider_type <- all_tripdata_filtered %>%
@@ -194,19 +222,20 @@ bike_type_rider_type <- all_tripdata_filtered %>%
   summarise(trip_count = n(), .groups = "drop") %>%
   arrange(desc(trip_count))
 
-bike_type_rider_type # insights: member riders tend to prefer classic bikes while casual riders tend to prefer electric bikes.
-
-plot_4 <- ggplot(bike_type_rider_type, aes(x = reorder(rideable_type, trip_count), y = trip_count, fill = member_casual)) +
-  geom_bar(stat = "identity", position = "dodge") +
+plot_5 <-  ggplot(bike_type_rider_type, aes(x = member_casual, y = trip_count, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  scale_y_continuous(labels = scales::comma) +
+  facet_wrap(~rideable_type) +
   labs(
     title = "Number of Rides by Bike Type and Rider Type",
     x = "Bike type",
     y = "Number of rides",
     fill = "Rider type"
-  ) +
-  coord_flip()
+  )
 
-ggsave("./viz/total_rides_by_bike_type_by_rider_type.png", plot = plot_4, width = 10, height = 6)
+plot_5 # insights: member riders tend to prefer classic bikes while casual riders tend to prefer electric bikes
+
+ggsave("./viz/total_rides_by_bike_type_by_rider_type.png", plot = plot_5, width = 10, height = 6)
 
 # -- Ride Distance By Rider Type --
 distance_by_rider_type <- all_tripdata_filtered %>%
@@ -223,3 +252,35 @@ all_tripdata_filtered %>%
   group_by(member_casual) %>%
   filter(start_station_id == end_station_id) %>%
   summarise(count_same_station = n(), .groups = "drop")
+
+all_tripdata_filtered %>%
+  group_by(member_casual) %>%
+
+group_by(rideable_type, member_casual) %>% 
+  summarize(number_of_rides = n(), .groups = 'drop') %>% 
+  drop_na() %>% 
+
+## -- Top 10 Used Stations By Casual Riders
+
+top_10_station <- all_tripdata_filtered %>% 
+  filter(!is.na(start_station_name) & start_station_name != "") %>%
+  group_by(start_station_name) %>% 
+  summarise(station_count = n()) %>% 
+  arrange(desc(station_count)) %>% 
+  slice(1:10)
+top_10_station
+
+plot_6 <- ggplot(data = top_10_station, aes(x = reorder(start_station_name, station_count), y = station_count, fill = station_count)) +
+  geom_col(position = "dodge") +
+  labs(
+    title = "Top 10 Used Stations by Casual Riders",
+    x = "",
+    y = "Number of rides"
+  )+  
+  scale_y_continuous(labels = scales::comma) +
+  scale_fill_gradient(low = "lightgrey", high = "black") +
+  coord_flip()
+
+plot_6
+
+ggsave("./viz/top10_station_by_casual_riders.png", plot = plot_6, width = 10, height = 6)
