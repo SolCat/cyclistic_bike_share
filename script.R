@@ -217,8 +217,3 @@ all_tripdata_filtered %>%
   group_by(member_casual) %>%
   filter(start_station_id == end_station_id) %>%
   summarise(count_same_station = n(), .groups = "drop") # 371,295 rides for member vs 342,942 rides for casual
-
-all_tripdata_filtered %>%
-  group_by(member_casual) %>%
-  filter(start_station_id == end_station_id) %>%
-  summarise(count_same_station = n(), .groups = "drop")
