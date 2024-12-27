@@ -131,7 +131,7 @@ geom_bar(stat = "identity") +
 labs(
   title = "Average Trip Duration by User Type",
   x = "User type",
-  y = "Average ride duration (min)
+  y = "Average ride duration" (min)
   ) # insights: casual riders have longer average trip duration than member riders
 
 # -- Average Ride Duration for Member Riders by Day --
